@@ -23,376 +23,480 @@
 /*
  * 
  * libAbCli is a small class for writing cli scripts in php
- * versio: 0.3
+ * versio: 0.4
  */
 
 class cli{
+    
+    private static $instance; // singleton instance
+    
+    // control Variables
+    private $isCli = false;
+    private $isRoot;
+    private $interactive = false;
+
+
+    // String Variables
+    private $newLine = "\n";
+    private $newTab = "\t";
+    private $newReturn = "\r";
+    private $exitKeys = ["q","^C"];
+    private $strings = [
+        "pressAnyKey"=>"Press Any Key",
+        "writeConfirm"=>"please write @@@@ to confirm.", // @@@@ 
+        "yes"=>"yes",
+        "no"=>"no",
+    ];
+    private $animation = "\|/-\|/-";
+    private $animationPos = 0;
+
+
 
     /*
-     * 
-     * Return The given args
-     * 
+     * Singleton implementation
      */
-    static function getArgs(){
-
-      $argsCount = count($_SERVER["argv"]);
-      $args = $_SERVER["argv"];
-      array_shift($args);
-
-      $return = array("script"=>$_SERVER["argv"][0]);
-
-      if($argsCount > 1){
-        $args  = array_shift($args);
-
-        $parNum = 0;
-        for ($i=1; $i < $argsCount; $i++) {
-          $val = $i-1;
-          if(substr($_SERVER["argv"][$i], 0,1) == "-"){
-
-            $parameter = substr($_SERVER["argv"][$i],1);
-            if(($i+1) != $argsCount){
-              if(substr($_SERVER["argv"][($i+1)], 0,1) == "-" ){
-                  $return[$parameter]= 1;
-                  //$this->{$parameter} = 1;
-              }else{
-                $i++;
-                $return[$parameter]= $_SERVER["argv"][$i];	
-                //$this->{$parameter} = $_SERVER["argv"][$i];						
-              }						
-            }else{
-              $return[$parameter]= 1;
-              //$this->{$parameter} = 1;	
-            }
-
-          }else{
-            $return[$parNum]= $_SERVER["argv"][$i];
-            //$this->{$parNum} = $_SERVER["argv"][$i];
-            $parNum++;
-          }
+    private  function __construct($in = true){
+        // check if is CLI 
+        if(php_sapi_name() == "cli"){
+            $this->isCli =TRUE;
+        }else{
+          $this->isCli =FALSE;
         }
-      }
-      return $return;
+        
+        // asing the interactive atribute
+        // interactive is when the user cals the script
+        // non interactive is for automatization, for example a cron job
+        if($in){
+            $this->interactive = true;
+        }
+        
     }
+
+    public static function getInstance($in = true){
+        if (  !self::$instance instanceof self){
+            self::$instance = new self($in);
+        }
+        return self::$instance;
+    }
+    // copy of getInstance
+    public static function init($in = true){
+        return self::getInstance($in);
+    }
+    
+    
+    
+    
+    
+    public function isInteractive(){
+        return $this->interactive;
+    }
+    // alias for isInteractive()
+    public function isIn(){
+        return $this->isInteractive();
+    }
+
+    public function enableInteractive(){
+        return  $this->interactive = TRUE;
+    }
+    // alias for enable interactive
+    public function enIn(){
+        return $this->enableInteractive();
+    }
+
+    public function disableInteractive(){
+        return $this->interactive = FALSE;
+    }
+    
+    //alias for disableInteractive
+    public function disIn(){
+        return $this->disableInteractive();
+    }
+
 
     /*
      * 
      * Check if is run by cli
      * 
      */
-    static function is_cli(){
-      if(php_sapi_name() == "cli"){
-        return true;
-      }else{
-        return false;
-      }
+    public function isCli($exit = true){
+        if($this->isCli != TRUE && $exit == TRUE ){
+            exit;
+        }
+        return $this->isCli;
+    }
+    
+
+
+
+    /*
+     * 
+     * Return The given args
+     * 
+     */
+    public function getArgs(){
+        $argsCount = count($_SERVER["argv"]);
+        $args = $_SERVER["argv"];
+        array_shift($args);
+
+        $return = array("script"=>$_SERVER["argv"][0]);
+        $options = [];
+        $atributes = [];
+
+        if($argsCount > 1){
+            $args  = array_shift($args);
+
+            $parNum = 0;
+            for ($i=1; $i < $argsCount; $i++) {
+                $val = $i-1;
+                if(substr($_SERVER["argv"][$i], 0,2) == "--" ){
+                    // if ARG starts with --
+                    $parameter = substr($_SERVER["argv"][$i],2);
+                    if(($i+1) != $argsCount){
+                        if(substr($_SERVER["argv"][($i+1)], 0,1) == "-" ){
+                            $options[$parameter]= TRUE;
+                            //$this->{$parameter} = 1;
+                        }else{
+                          $i++;
+                          $options[$parameter]= $_SERVER["argv"][$i];	
+                          //$this->{$parameter} = $_SERVER["argv"][$i];						
+                        }						
+                    }else{
+                        $options[$parameter]= TRUE;
+                        //$this->{$parameter} = 1;	
+                    }
+
+                }elseif(substr($_SERVER["argv"][$i], 0,1) == "-"){
+                    // if ARG starts with --
+                    $parameter = substr($_SERVER["argv"][$i],1);
+                    if(($i+1) != $argsCount){
+                        if(substr($_SERVER["argv"][($i+1)], 0,1) == "-" ){
+                            $options[$parameter]= TRUE;
+                            //$this->{$parameter} = 1;
+                        }else{
+                          $i++;
+                          $options[$parameter]= $_SERVER["argv"][$i];	
+                          //$this->{$parameter} = $_SERVER["argv"][$i];						
+                        }						
+                    }else{
+                        $options[$parameter]= TRUE;
+                        //$this->{$parameter} = 1;	
+                    }              
+                }else{
+                    $atributes[$parNum]= $_SERVER["argv"][$i];
+                    //$this->{$parNum} = $_SERVER["argv"][$i];
+                    $parNum++;
+                }
+            }
+        }
+        $return["options"] = $options;
+        $return["atributes"]= $atributes;
+        return $return;
+    }
+
+    /*
+     * 
+     * Check if you are root on unix
+     */
+    public function isRoot(){
+        if (!isset($this->isRoot)){
+            if (posix_getuid() == 0){
+                $this->isRoot = TRUE;
+            } else {
+                $this->isRoot = FALSE;
+            }
+        }
+        return $this->isRoot;
+    }
+    
+    public function isSuperCow(){
+        if($this->isRoot){
+            return true;
+        }else{
+            $this->pline("You don't have SuperCow Powers!!!");
+            exit;
+        }
+    }
+
+    /*
+     * 
+     *  print a mesage
+     */
+    public function pline($string=false){
+        if (!$this->isIn() || $string == false)  return;
+        echo $string;
+        $this->pNewLine();            
+    }
+    
+    
+    /*
+     * Print any Char N times
+     */
+    public function pnChar($char=false,$times=1){
+        if(!$char) return false;
+        if (!$this->isIn())  return;
+	for ($i=0; $i < $times; $i++) {
+            echo $char;
+        }
+    }
+
+    /*
+     * Print a new line
+     */
+    public function pNewLine($times = 1){
+        $this->pnChar($this->newLine,$times);
+    }
+
+    /*
+     * PRint a Tab character
+     */
+    public function pNewTab($times = 1){
+        $this->pnChar($this->newLine,$times);
+    }
+    
+    /*
+     *  Clear the Screen
+     */
+    public function clear(){
+        if (!$this->isIn())  return;        
+        system("clear");
+
+    }	
+	
+    
+    public function quit(){
+	  exit;
     }
 	
-	
-	static function safe_cli(){
-	  if(!cli::is_cli()){
-	       exit;
-	  }
-	}
-	
-	
-	static function hasRootPower(){
-	    // we asume only root can write in /root
-	    if(is_writable("/root")){
-	      return true;
-	    }else{
-	      return false;
-	    }
-	}
-	
-	static function anyKeyMessage($msg){
-		if(cli::is_interactive()){
-			cli::out($msg);
-			cli::out("pres any key to continue");
-			$handle = fopen ("php://stdin","r");
-			$return =  strtolower(trim(fgets($handle)));				
-			
-			if($return == "q" || $return == "^C"){
-				exit;
-			}			
-		}	
-	
-	}
 
-	// double confirmation yes/no question
-	static function getYesNoInput($msg="",$default="n",$confirmation=false,$msg2="please write @@@@ to confirm.",$confirmWord="yes"){
-		if(!cli::is_interactive()){
-			return $default;
-		}
+//#############################################################################################
+//      Here we start with interactive functions
+//#############################################################################################
 
+    public function anyKeyMessage($msg=false){
+        if (!$this->isIn())  return;
+        $this->pline($msg);
+        $this->pline($this->strings["pressAnyKey"]);
+            
+        $handle = fopen ("php://stdin","r");
+        $return =  strtolower(trim(fgets($handle)));				
 
-		$msg2 = str_replace ( "@@@@" , "\"$confirmWord\"" , $msg2 );
+        if(in_array($return, $this->exitKeys)){
+            exit;
+        }			
+    }
 
+    // double confirmation yes/no question
+    public function getYesNoInput($msg="",$default="n",$confirmation=false,$msg2= null,$confirmWord=null){
+        if (!$this->isIn())  return;     
+        if($msg2 === null) $msg2 = $this->strings["writeConfirm"];
+        if($confirmWord === null ) $confirmWord = $this->strings["yes"];
+        
+        $msg2 = str_replace ( "@@@@" , "\"$confirmWord\"" , $msg2 );
 
-		$return = "";
+        $return = "";
 
-		if($default == "y"){
-		  $values = "Y/n";
-		}else{
-		  $values = "y/N";
-		}
+        if($default == "y"){
+          $values = "Y/n";
+        }else{
+          $values = "y/N";
+        }
 
-		while (!in_array($return, array("y","n"))) {
-			cli::out($msg."( ".$values." )");
-			$handle = fopen ("php://stdin","r");
-			$return =  strtolower(trim(fgets($handle)));
-			
-			if($return == "q" || $return == "^C"){
-				exit;
-			}
-				
-			if($default != false && $return ==""){
-				$return = $default;
-				break;
-			}
-		}
+        while (!in_array($return, array("y","n"))) {
+                cli::pLine($msg."( ".$values." )");
+                $handle = fopen ("php://stdin","r");
+                $return =  strtolower(trim(fgets($handle)));
 
-		if($confirmation == true && $return == "y"){
+                if(in_array($return, $this->exitKeys)){
+                        exit;
+                }
 
-		      $default2 = "n";
-		      $value2 = "(N/no/$confirmWord)";
-		      $return2 = "";
-		      while (!in_array($return2, array($confirmWord,"n","no"))) {
-			      cli::out($msg2." $value2");
-			      $handle = fopen ("php://stdin","r");
-			      $return2 =  strtolower(trim(fgets($handle)));
-		      }
+                if($default != false && $return ==""){
+                    $return = $default;
+                    break;
+                }
+        }
 
-		      if($return2 == $confirmWord){
-			  return "y";
-		      }else{
-			  return "n";
-		      }
+        if($confirmation == true && $return == "y"){
 
-		}else{
-		    return $return;
-		}
+              $default2 = "n";
+              $value2 = "(N/no/$confirmWord)";
+              $return2 = "";
+              while (!in_array($return2, array($confirmWord,"n","no"))) {
+                      cli::pLine($msg2." $value2");
+                      $handle = fopen ("php://stdin","r");
+                      $return2 =  strtolower(trim(fgets($handle)));
+              }
+
+              if($return2 == $confirmWord){
+                  return "y";
+              }else{
+                  return "n";
+              }
+        }else{
+            return $return;
+        }
+    }
 
 
+    /*
+     * Get a input from keyboad
+     *  $allowed : array of values | string[ numeric | noempty ]
+     */
+    public function getInput($msg="",$allowed=false,$default=false){
+        if (!$this->isIn())  return;   
 
+        $return = "";
 
+        if(is_array($allowed)){
+            $values = "";
+            if($default!= false){
+                $values .= strtoupper($default);
+                foreach ($allowed as $val) {
+                    if($val != $default){
+                            $values .= "/".$val;
+                    }
+                }
+            }else{
+                $values = implode("/",  $allowed);
+            }
 
+            while (!in_array($return, $allowed)) {
+                cli::pLine($msg."( ".$values." )");
+                $handle = fopen ("php://stdin","r");
+                $return =  strtolower(trim(fgets($handle)));
 
+                if(in_array($return, $this->exitKeys)){
+                        exit;
+                }
 
-	    $valid = false;
+                if($default != false && $return ==""){
+                        $return = $default;
+                        break;
+                }
+            }			
+        }elseif($allowed == "numeric"){
+            if($default!= false){
+                $defaultstr = "(defautl:".$default.")";
+            }else{
+                $defaultstr = "";
+            }
+            while (!is_numeric($return)) {
+                cli::pLine($msg." ".$defaultstr);
 
-	    $sure = cli::getInput("Are you sure you want to perform this action? (write \"yes\" )",array("no","n","yes") );
+                $handle = fopen ("php://stdin","r");
+                $return =  strtolower(trim(fgets($handle)));				
 
-// 	    while($valid != true){
-// 
-// 		if(in_array($sure, array("yes","n","no") ) ){
-// 		    $valid = true;
-// 		    if($sure == "yes"){
-// 			  return true;
-// 		    }else{
-// 			  return false;
-// 		    }
-// 		}else{
-// 			
-// 			//cli::out("Please write \"yes\" , \"no\" or \"n\"");
-// 		}
-// $sure = cli::getInput("Please write \"yes\" , \"no\" or \"n\"",array("no","n","yes") );
-// 	    }
+                if(in_array($return, $this->exitKeys)){
+                    exit;
+                }
+                if($default != false && $return ==""){
+                    $return = $default;
+                    break;
+                }
+            }
 
-	}
+        }elseif($allowed == "noempty"){
+            if($default!= false){
+                $defaultstr = "(defautl:".$default.")";
+            }else{
+                $defaultstr = "";
+            }
+            while (empty($return)) {
+                cli::pLine($msg." ".$defaultstr);
 
+                $handle = fopen ("php://stdin","r");
+                $return =  strtolower(trim(fgets($handle)));				
 
+                if(in_array($return, $this->exitKeys)){
+                        exit;
+                }
+                if($default != false && $return ==""){
+                        $return = $default;
+                        break;
+                }
+            }
+        }else{
+            cli::pLine($msg." ".$default);
+            $handle = fopen ("php://stdin","r");
+            $return =  strtolower(trim(fgets($handle)));
 
+            if($default != false && $return ==""){
+                    $return = $default;
+            }		
+        }
 
-	# $allowed => numeric / noempty
-	static function getInput($msg="",$allowed=false,$default=false){
-		if(!cli::is_interactive()){
-			return $default;
-		}
+        if(in_array($return, $this->exitKeys)){
+                exit;
+        }		
+
+        return $return;
+    }
+    
+    
+    /*
+     * prints a list of options to select
+     */
+    public function getSelect($msg="",$selecctions=false,$printQuint = true){
+        if (!$this->isIn())  return;   		
+        if(!is_array($selecctions)){
+                return false;
+        }
 		
-		$return = "";
+        $elementSting = "";
+        $count = 1;
+        foreach ($selecctions as $element) {
+                $var[$count] = $element;
+                $elementSting .= "  $count - ".$element."\n";
+                $count ++;
+        }
+        if($printQuint == true){
+            $elementSting .= "  q - Quit! \n";
+        }
+        return $this->getInput($msg="$msg \n".$elementSting ,"numeric", false);		
+    }		
 
-		if(is_array($allowed)){
-			
-			$values = "";
-			if($default!= false){
-				$values .= strtoupper($default);
-				foreach ($allowed as $val) {
-					if($val != $default){
-						$values .= "/".$val;
-					}
-				}
-			}else{
-				$values = implode("/",  $allowed);
-			}
-					
-			while (!in_array($return, $allowed)) {
-				cli::out($msg."( ".$values." )");
-				$handle = fopen ("php://stdin","r");
-				$return =  strtolower(trim(fgets($handle)));
-				
-				if($return == "q" || $return == "^C"){
-					exit;
-				}
-					
-				if($default != false && $return ==""){
-					$return = $default;
-					break;
-				}
-			}			
-		}elseif($allowed == "numeric"){
-			if($default!= false){
-				$defaultstr = "(defautl:".$default.")";
-			}else{
-				$defaultstr = "";
-			}
-			while (!is_numeric($return)) {
-				cli::out($msg." ".$defaultstr);
-				
-				$handle = fopen ("php://stdin","r");
-				$return =  strtolower(trim(fgets($handle)));				
-				
-				if($return == "q" || $return == "^C"){
-					exit;
-				}
-				if($default != false && $return ==""){
-					$return = $default;
-					break;
-				}
-			}
-			
-		}elseif($allowed == "noempty"){
-			if($default!= false){
-				$defaultstr = "(defautl:".$default.")";
-			}else{
-				$defaultstr = "";
-			}
-			while (empty($return)) {
-				cli::out($msg." ".$defaultstr);
-				
-				$handle = fopen ("php://stdin","r");
-				$return =  strtolower(trim(fgets($handle)));				
-				
-				if($return == "q" || $return == "^C"){
-					exit;
-				}
-				if($default != false && $return ==""){
-					$return = $default;
-					break;
-				}
-			}
-		}else{
-			cli::out($msg." ".$default);
-			$handle = fopen ("php://stdin","r");
-			$return =  strtolower(trim(fgets($handle)));
-			
-			if($default != false && $return ==""){
-				$return = $default;
-			}		
-		}
-		
-		
-		
-		
-		if($return == "q" || $return == "^C"){
-			exit;
-		}		
-		return $return;
-	}
+//	static function sys($cm = false){
+//		if($cm!=false){
+//			if(defined("DEMO") && DEMO == true){
+//				cli::out("command: '".$cm."'");
+//			}else{
+//				system($cm);
+//			}
+//		}
+//	}
 
-	static function getSelectInput($msg="",$selecctions=false,$printQuint = true){
-		
-		if(!is_array($selecctions)){
-			return false;
-		}
-		
-		$elementSting = "";
-		$count = 1;
-		foreach ($selecctions as $element) {
-			$var[$count] = $element;
-			$elementSting .= "  $count - ".$element."\n";
-			$count ++;
-		}
-		if($printQuint == true){
-		    $elementSting .= "  q - Quit! \n";
-		}
-		return cli::getInput($msg="$msg \n".$elementSting ,"numeric", false);
-		
-	}		
+    
+    
 
-	static function sys($cm = false){
-		if($cm!=false){
-			if(defined("DEMO") && DEMO == true){
-				cli::out("command: '".$cm."'");
-			}else{
-				system($cm);
-			}
-		}
-	}
-	static function is_interactive(){
-	  if(defined("INTERACTIVE") && INTERACTIVE == true){
-		return true;
- 	  }else{
- 	  	return false;
- 	  }
-		
-	}
-	static function out($string){
+    /*
+     * 
+     * Wil remove extra / from path;
+     * for example /home//user will get /home/user
+     */
+    static function sanitizePath($path){
+            $path = trim($path);
+            $path = preg_replace('/\/+/', '/',$path);
+            return $path;
+    }    
+    /*
+     * Animate CLI 
+     */
 
-		if(cli::is_interactive()){
-			echo $string;
-			cli::n();
-		}
-	}
+    
+    public function animate(){
+        if (!$this->isIn())  return;           
+        $animLength = strlen($this->animation);
+        if($this->animationPos == $animLength ){
+            $this->animationPos=0;
+        }
+        echo $this->animation[$this->animationPos]."\r";
+        $this->animationPos++;
+        
+    }
+    
+
+
 	
-	static function info($string){
-		if(cli::is_interactive()){
-			cli::n();
-			echo "======== INFO ========\n";
-			echo $string;
-			cli::n(2);
-		}	
-	}
 
-	static function printForms($char=false,$times=1){
-	  if($char == false){
-	    return;
-	  }
-	          
-	  if(!cli::is_interactive()){
-		return;
- 	  }
-					  
-	  for ($i=0; $i < $times; $i++) { 
-	    switch ($char) {
-	      case 'n':
-	    echo "\n";	
-	    break;
-	  case 't':
-	    echo "\t";	
-	        break;
-	      default:
-	      
-	        break;
-	    }		
-	  }
-	}
-	
-	static function n($times=1){
-	  cli::printForms("n",$times);
-	}
-	 
-	static function t($times=1){
-	  cli::printForms("t",$times);
-	}
-	static function c(){
-		if(cli::is_interactive()){
-			system("clear");
-		}
-	}	
-	
-	static function quit(){
-	  exit;
-	}
-	
 	
 }// end of cli
