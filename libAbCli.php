@@ -17,14 +17,18 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library.
  *
- *
+ *aladmios aldo
  */
 
 
 /*
  * 
  * libAbCli is a small class for writing cli scripts in php
+<<<<<<< HEAD
  * version: 0.4
+=======
+ * versio: 0.4
+>>>>>>> 7fb9710... Complete Refactoring
  */
 
 class cli{
