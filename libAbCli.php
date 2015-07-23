@@ -24,11 +24,7 @@
 /*
  * 
  * libAbCli is a small class for writing cli scripts in php
-<<<<<<< HEAD
- * version: 0.4
-=======
  * versio: 0.4
->>>>>>> 7fb9710... Complete Refactoring
  */
 
 class cli{
@@ -43,8 +39,8 @@ class cli{
 
     // String Variables
     private $newLine = "\n";
-    private $newTab = "\t";
-    private $newReturn = "\r";
+    //private $newTab = "\t";
+    //private $newReturn = "\r";
     private $exitKeys = ["q","^C"];
     private $strings = [
         "pressAnyKey"=>"Press Any Key",
@@ -152,7 +148,7 @@ class cli{
 
             $parNum = 0;
             for ($i=1; $i < $argsCount; $i++) {
-                $val = $i-1;
+//                $val = $i-1;
                 if(substr($_SERVER["argv"][$i], 0,2) == "--" ){
                     // if ARG starts with --
                     $parameter = substr($_SERVER["argv"][$i],2);
@@ -238,10 +234,11 @@ class cli{
      */
     public function pnChar($char=false,$times=1){
         if(!$char) return false;
-        if (!$this->isIn())  return;
-	for ($i=0; $i < $times; $i++) {
-            echo $char;
+        if (!$this->isIn())  return true;
+        for ($i=0; $i < $times; $i++) {
+                echo $char;
         }
+        return true;
     }
 
     /*
@@ -292,7 +289,7 @@ class cli{
 
     // double confirmation yes/no question
     public function getYesNoInput($msg="",$default="n",$confirmation=false,$msg2= null,$confirmWord=null){
-        if (!$this->isIn())  return;     
+        if (!$this->isIn())  return true;
         if($msg2 === null) $msg2 = $this->strings["writeConfirm"];
         if($confirmWord === null ) $confirmWord = $this->strings["yes"];
         
@@ -323,7 +320,7 @@ class cli{
 
         if($confirmation == true && $return == "y"){
 
-              $default2 = "n";
+              //$default2 = "n";
               $value2 = "(N/no/$confirmWord)";
               $return2 = "";
               while (!in_array($return2, array($confirmWord,"n","no"))) {
@@ -348,7 +345,7 @@ class cli{
      *  $allowed : array of values | string[ numeric | noempty ]
      */
     public function getInput($msg="",$allowed=false,$default=false){
-        if (!$this->isIn())  return;   
+        if (!$this->isIn())  return true;
 
         $return = "";
 
@@ -442,7 +439,7 @@ class cli{
      * prints a list of options to select
      */
     public function getSelect($msg="",$selecctions=false,$printQuint = true){
-        if (!$this->isIn())  return;   		
+        if (!$this->isIn())  return true;
         if(!is_array($selecctions)){
                 return false;
         }
